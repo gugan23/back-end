@@ -1,3 +1,47 @@
+"""
+ Task Management API
+---------------------
+
+Description:
+    A Flask-based REST API that provides  task assignment functionality.
+    Features include user authentication, template CRUD operations, and task management with
+    user assignments. Uses MongoDB Atlas for data storage and JWT for authentication.
+
+Core Features:
+    - User Authentication (Register/Login)
+    - Template Management (CRUD operations)
+    - Task Management System
+    - Team Management
+    - JWT-based Security
+    - MongoDB Atlas Integration
+
+Author: Gugan
+Email: gugan7169@gmail.com
+Created: January 18, 2025
+Last Updated: January 19, 2025
+
+API Endpoints:
+    - /register: User registration
+    - /login: User authentication
+    - /template: Template management
+    - /task: Task management
+    - /team: Team member listing
+
+Requirements:
+    - Flask
+    - PyMongo
+    - Flask-JWT-Extended
+    - Python-dotenv
+    - Werkzeug
+    - Flask-CORS
+
+Environment Variables Required:
+    - JWT_SECRET_KEY
+    - MONGO_URI
+"""
+
+
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 from pymongo import MongoClient
@@ -12,12 +56,11 @@ load_dotenv()
 app = Flask(__name__, static_folder='template-management/build')
 CORS(app)
 
-# JWT Configuration
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 jwt = JWTManager(app)
 
-# MongoDB Atlas Connection
+
 MONGO_URI = os.getenv('MONGO_URI')
 try:
     client = MongoClient(MONGO_URI)
@@ -27,19 +70,19 @@ try:
 except Exception as e:
     print(f"Failed to connect to MongoDB: {e}")
 
-# Root route
+
 @app.route('/')
 def home():
     return jsonify({'message': 'Welcome to Template Management API'}), 200
 
-# Error handler for ObjectId conversion
+
 @app.errorhandler(Exception)
 def handle_invalid_usage(error):
     if "Invalid ObjectId" in str(error):
         return jsonify({"message": "Invalid template ID format"}), 400
     return jsonify({"message": str(error)}), 500
 
-# User Registration
+
 @app.route('/register', methods=['POST'])
 def register():
     try:
@@ -49,11 +92,11 @@ def register():
 
         required_fields = ['first_name', 'last_name', 'email', 'password']
 
-        # Validate required fields
+        
         if not all(field in data for field in required_fields):
             return jsonify({'message': 'Missing required fields'}), 400
 
-        # Check if email already exists
+       
         if db.users.find_one({'email': data['email']}):
             return jsonify({'message': 'Email already registered'}), 400
 
@@ -70,7 +113,7 @@ def register():
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
-# User Login
+
 @app.route('/login', methods=['POST'])
 def login():
     try:
@@ -78,7 +121,7 @@ def login():
         if not data:
             return jsonify({'message': 'No input data provided'}), 400
 
-        # Validate required fields
+       
         if not all(field in data for field in ['email', 'password']):
             return jsonify({'message': 'Missing email or password'}), 400
 
@@ -95,7 +138,7 @@ def login():
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
-# Template CRUD Operations
+
 @app.route('/template', methods=['POST'])
 @jwt_required()
 def create_template():
@@ -105,7 +148,7 @@ def create_template():
         if not data:
             return jsonify({'message': 'No input data provided'}), 400
 
-        # Validate required fields
+        
         required_fields = ['template_name', 'subject', 'body']
         if not all(field in data for field in required_fields):
             return jsonify({'message': 'Missing required fields'}), 400
@@ -133,10 +176,10 @@ def get_all_templates():
         current_user = get_jwt_identity()
         templates = list(db.templates.find({'user_id': current_user}))
 
-        # Convert ObjectId to string for JSON serialization
+      
         for template in templates:
             template['_id'] = str(template['_id'])
-            # Convert datetime objects to string
+           
             if 'created_at' in template:
                 template['created_at'] = template['created_at'].isoformat()
             if 'updated_at' in template:
@@ -152,7 +195,7 @@ def template_operations(template_id):
     try:
         current_user = get_jwt_identity()
 
-        # Validate template_id format
+        
         try:
             template_obj_id = ObjectId(template_id)
         except:
@@ -168,7 +211,7 @@ def template_operations(template_id):
                 return jsonify({'message': 'Template not found'}), 404
 
             template['_id'] = str(template['_id'])
-            # Convert datetime objects to string
+            
             if 'created_at' in template:
                 template['created_at'] = template['created_at'].isoformat()
             if 'updated_at' in template:
@@ -181,7 +224,7 @@ def template_operations(template_id):
             if not data:
                 return jsonify({'message': 'No input data provided'}), 400
 
-            # Validate required fields
+   
             required_fields = ['template_name', 'subject', 'body']
             if not all(field in data for field in required_fields):
                 return jsonify({'message': 'Missing required fields'}), 400
@@ -215,7 +258,7 @@ def template_operations(template_id):
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
-# Task CRUD Operations
+
 @app.route('/task', methods=['POST'])
 @jwt_required()
 def create_task():
@@ -225,7 +268,7 @@ def create_task():
         if not data:
             return jsonify({'message': 'No input data provided'}), 400
 
-        # Validate required fields
+        
         required_fields = ['assigned_user', 'task_date', 'task_time', 'task_msg']
         if not all(field in data for field in required_fields):
             return jsonify({'message': 'Missing required fields'}), 400
@@ -259,7 +302,7 @@ def get_tasks():
         current_user = get_jwt_identity()
         tasks = list(db.tasks.find({'assigned_user': current_user}))
 
-        # Convert ObjectId to string for JSON serialization
+        
         for task in tasks:
             task['_id'] = str(task['_id'])
             task['assigned_by'] = str(task['assigned_by'])
@@ -268,7 +311,7 @@ def get_tasks():
             assigned_to_user = db.users.find_one({'_id': ObjectId(task['assigned_user'])})
             task['assigned_by_name'] = f"{assigned_by_user['first_name']} {assigned_by_user['last_name']}"
             task['assigned_to_name'] = f"{assigned_to_user['first_name']} {assigned_to_user['last_name']}"
-            # Convert datetime objects to string
+            
             if 'created_at' in task:
                 task['created_at'] = task['created_at'].isoformat()
 
@@ -282,7 +325,7 @@ def task_operations(task_id):
     try:
         current_user = get_jwt_identity()
 
-        # Validate task_id format
+       
         try:
             task_obj_id = ObjectId(task_id)
         except:
@@ -304,7 +347,7 @@ def task_operations(task_id):
             assigned_to_user = db.users.find_one({'_id': ObjectId(task['assigned_user'])})
             task['assigned_by_name'] = f"{assigned_by_user['first_name']} {assigned_by_user['last_name']}"
             task['assigned_to_name'] = f"{assigned_to_user['first_name']} {assigned_to_user['last_name']}"
-            # Convert datetime objects to string
+            
             if 'created_at' in task:
                 task['created_at'] = task['created_at'].isoformat()
 
@@ -315,7 +358,7 @@ def task_operations(task_id):
             if not data:
                 return jsonify({'message': 'No input data provided'}), 400
 
-            # Validate required fields
+          
             required_fields = ['is_completed']
             if not all(field in data for field in required_fields):
                 return jsonify({'message': 'Missing required fields'}), 400
@@ -358,7 +401,7 @@ def task_operations(task_id):
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
-# Fetch all users except the logged-in user
+
 @app.route('/team', methods=['GET'])
 @jwt_required()
 def get_users():
